@@ -1,6 +1,0 @@
----
-- name: Pushing the mlocate
-  copy:
-    scr: /etc/cron.daily/mlocate
-    dest: /etc/cron.daily/mlocate
-    mode: 0755
