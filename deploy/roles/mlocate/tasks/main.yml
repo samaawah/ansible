@@ -1,0 +1,17 @@
+############################
+##   mlocate cron setup   ##
+############################
+---
+- name: Install mlocate
+  yum:
+    name: mlocate
+    state: present
+    disable_gpg_check: yes
+  register: mlocate_package
+
+- name: Pushing the mlocate
+  template:
+    src: mlocate.j2
+    dest: /etc/cron.daily/mlocate
+    mode: 0755
+  when: mlocate_package is succeeded

@@ -1,0 +1,30 @@
+---
+###
+# Ansible Deployment Playbook
+# Example: ansible-playbook site.yml -i <ip or hostname>
+# Awah Sama
+###
+- name: Deploy Base Configuration
+  user: asama
+  hosts: all
+  become: yes
+
+  tasks:
+
+    - name: call package role
+      import_role:
+        name: package
+      tags:        
+        - package
+
+          #        - name: call yum role
+          #import_role:
+          # name: yum
+          #tags:    
+          #- yum
+
+    - name: call mlocate role
+      import_role:
+        name: mlocate
+      tags:
+        - mlocate

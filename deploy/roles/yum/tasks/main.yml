@@ -1,0 +1,31 @@
+---
+## Update the System
+- name: Ensuring latest updates are applied
+  when: inventory_hostname[6:8]
+  yum:
+    name: '*'
+    state: latest
+    update_cache: yes
+    disable_gpg_check: yes
+
+- name: Check if reboot required
+  shell: needs-restarting -r
+  failed_when: false
+  register: reboot_required
+  changed_when: false
+
+- name: Reboot Server
+  command: /sbin/shutdown -r
+  async: 0
+  poll: 0
+  when: reboot_required.stdout == "reboot_required"
+  register: reboot_started_yum
+
+- name: wait for reboot
+  pause:
+    minutes: 3
+  when: reboot_started_yum is changed
+
+- name: Check if system is responding to SSH
+  local_action: wait_for host={{ inventory_hostname }} search_regex=OpenSSH port=22 delay=15 timeout=300 state=started
+  when: reboot_started_yum is changed

@@ -1,0 +1,9 @@
+---
+- name: Installing Base Packages
+  yum:
+    name: "{{ base_packages }}"
+    update_cache: yes
+    state: absent
+    disable_gpg_check: yes
+  ignore_errors: yes
+

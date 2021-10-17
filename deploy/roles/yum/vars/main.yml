@@ -1,0 +1,16 @@
+---
+base_packages:
+ - perl
+ - vim
+ - tmux
+ - wget
+ - nfs-utils
+ - perl-TimeDate
+ - openssl
+ - strace
+ - bind-utils
+ - sos
+ - sysstat
+ - yum-utils
+ - mlocate
+ - lsof
