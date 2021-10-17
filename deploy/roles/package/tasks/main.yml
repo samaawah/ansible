@@ -3,7 +3,7 @@
   yum:
     name: "{{ base_packages }}"
     update_cache: yes
-    state: absent
+    state: present
     disable_gpg_check: yes
   ignore_errors: yes
 

@@ -1,0 +1,29 @@
+---
+- name: Pwmgr Rhel 8 Dep Package
+  when: ansible_distribution_major_version >= "8"
+  yum: 
+    name: "{{ item }}"
+    state: latest
+    disable_gpg_check: yes
+  with_items:
+    - perl-LWP-Protocol-https
+    - perl-libwww-perl  
+
+- name: Pwmgr Rhel 7 Dep Package
+  when: ansible_distribution_major_version >= "7"
+  yum:
+    name: "{{ item }}"
+    state: latest
+    disable_gpg_check: yes
+  with_items:
+    - perl-LWP-Protocol-https
+    - perl-libwww-perl
+    - perl-Crypt-SSLeay
+
+
+- name: Download Cron file from SSVCPW Server
+  get_url:
+    url: https://ssvcpw.oit.utk.edu/pwmgr.cron
+    dest: /etc/cron.hourly/pwmgr
+    mode: 0755 
+# tasks file for pwmgr
