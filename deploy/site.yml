@@ -5,9 +5,10 @@
 # Awah Sama
 ###
 - name: Deploy Base Configuration
-  user: asama
-  hosts: all
-  become: yes
+#  user: asama
+  hosts: localhost
+  connection: local
+#  become: yes
 
   tasks:
 
@@ -16,12 +17,12 @@
         name: package
       tags:        
         - package
-
-          #        - name: call yum role
-          #import_role:
-          # name: yum
-          #tags:    
-          #- yum
+        
+    - name: call yum role
+      import_role:
+        name: yum
+      tags:    
+        - yum
 
     - name: call mlocate role
       import_role:
