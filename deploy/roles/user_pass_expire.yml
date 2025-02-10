@@ -1,0 +1,97 @@
+---
+# tasks main playbook # ansible-playbook -i inventory local-userpass-expire/playbook ##
+- name: Check host connectivity
+  hosts: all
+  gather_facts: yes
+  become: yes
+
+  vars:
+   result_file: "/tmp/user_expiration_report.yaml"
+
+  tasks:
+    - name: Ping all hosts
+      ansible.builtin.ping:
+      ignore_errors: yes
+      register: ping_result
+
+    - name: Report unreachable hosts
+      ansible.builtin.debug:
+        msg: "Host {{ inventory_hostname }} is unreachable."
+      when: ping_result is failed
+
+# tasks file for local-userpass-expire
+    - name: Get list of all users on the system
+      shell: "getent passwd | grep -Ev 'nologin|shutdown|sync|halt|tlog-rec-session|ACCLARISCORP|/bin/false|cmk-agent'"
+      register: users_list
+
+    - name: Parse and extract usernames
+      set_fact:
+        all_users: >
+          {{
+            users_list.stdout_lines |
+            map("split", ":") |
+            map("first") |
+            list
+          }}
+      ignore_unreachable: yes
+
+    - name: Check password expiration date of each existing user
+      shell: "chage -l {{ item }} | grep 'Password expires' | cut -d ':' -f2 | xargs -I {} echo {}"
+      loop: "{{ all_users }}"
+      register: user_expirations
+      ignore_errors: yes
+
+    - name: Calculate current date in epoch
+      command: date +%s
+      register: current_date
+
+    - name: Calculate 30 days from now in epoch
+      set_fact:
+        expiration_threshold: "{{ (current_date.stdout | int) + (30 * 24 * 60 * 60) }}"
+
+
+    - name: Find users whose password expires within 30 days
+      set_fact:
+        expiring_passwords: "{{ expiring_passwords | default([]) + [item.item] }}"
+      loop: "{{ user_expirations.results }}"
+      when:
+        - item.stdout != 'never'  # Skip users with 'never' expiration
+        - " (lookup('pipe', 'date -d \"' + item.stdout + '\" +%s') | int) < (expiration_threshold | int) "
+
+    - name: Aggregate results from all hosts
+      set_fact:
+        host_expiring_passwords: "{{ expiring_passwords | default([]) }}"
+      when: host_expiring_passwords | default("some_default_value") != "not_defined"
+
+    - name: Collect results from all hosts
+      delegate_to: localhost
+      run_once: true
+      set_fact:
+        all_hosts_expiring_passwords: >-
+          {{
+            all_hosts_expiring_passwords | default({}) | combine(
+              dict(ansible_play_hosts_all | map('extract', hostvars, 'inventory_hostname') | zip(
+                ansible_play_hosts_all | map('extract', hostvars, 'host_expiring_passwords')
+              ))
+            )
+          }}
+      ignore_errors: yes
+
+    - name: Save consolidated results to a YAML file on the controller
+      delegate_to: localhost
+      copy:
+        content: "{{ all_hosts_expiring_passwords | to_nice_yaml }}"
+        dest: "{{ result_file }}"
+      run_once: true
+
+    - name: run script and forward email to team
+      delegate_to: localhost
+      command: sh /root/user_script.sh
+      run_once: true
+
+    - name: cleanup report file from tmp folder
+      delegate_to: localhost
+      file:
+        state: absent
+        path: "{{ result_file }}"
+      run_once: true
